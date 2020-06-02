@@ -84,12 +84,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         TabHost.TabSpec tab1 = tabHost.newTabSpec("t1");
         tab1.setContent(R.id.tab1);
-        tab1.setIndicator("GỌI");
+        tab1.setIndicator("GỌI NHANH");
         tabHost.addTab(tab1);
 
         TabHost.TabSpec tab2 = tabHost.newTabSpec("t2");
         tab2.setContent(R.id.tab2);
-        tab2.setIndicator("DANH BẠ");
+        tab2.setIndicator("BÀN PHÍM");
         tabHost.addTab(tab2);
 
         TabHost.TabSpec tab3 = tabHost.newTabSpec("t3");

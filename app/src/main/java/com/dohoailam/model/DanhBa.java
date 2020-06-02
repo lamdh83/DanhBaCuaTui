@@ -71,6 +71,14 @@ public class DanhBa implements Serializable {
         this.hinh_anh = hinh_anh;
     }
 
+    public DanhBa( String ho_ten, String so_dt) {
+
+
+        this.ho_ten = ho_ten;
+        this.so_dt = so_dt;
+
+    }
+
     public int getSo_tt() {
         return so_tt;
     }
