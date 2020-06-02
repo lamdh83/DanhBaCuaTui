@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/mnuCall"
+        android:title="Gọi" />
+    <item
+        android:id="@+id/mnuSms"
+        android:title="Nhắn tin" />
+    <item
+        android:id="@+id/mnuSua"
+        android:title="Sửa" />
+</menu>
