@@ -1,7 +1,11 @@
 package com.dohoailam.danhbacuatui;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
@@ -12,26 +16,49 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Looper;
+import android.provider.Settings;
 import android.speech.RecognizerIntent;
 import android.telephony.SmsManager;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.Switch;
 import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.androdocs.httprequest.HttpRequest;
 import com.dohoailam.helper.DataBaseHelper;
 import com.dohoailam.model.DanhBa;
+import com.dohoailam.model.QuocGia;
+import com.dohoailam.ultils.DanhSachQuocGia;
 import com.dohoailam.ultils.DongBoDanhBa;
 import com.dohoailam.ultils.Lam;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener {
@@ -42,6 +69,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     Lam lam = new Lam(this);
     private final int REQ_CODE_SPEECH_INPUT = 100;
     ArrayList<String> arraySoDt = new ArrayList<>();
+    //LatLng curLatLng = new LatLng(21.0278,105.8342);
 
     // TAB1 //
     ImageView imgMic;
@@ -52,6 +80,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             ,btnTab2_Thang,btnTab2_Sao;
     ImageButton imgBtnTab2_DanhBa, imgBtnTab2_Call,imgBtnTab2_CLR;
     TextView txtSoDt;
+
+    //TAB3
+    LatLng curLatLng = new LatLng(21.0278,105.8342);;
+
+    String CITY = "dhaka,bd";
+    String API = "758c97093c1bd6a7203574553a198abe";
+
+    TextView addressTxt, updated_atTxt, statusTxt, tempTxt, temp_minTxt, temp_maxTxt, sunriseTxt,
+            sunsetTxt, windTxt, pressureTxt, humidityTxt;
+    int PERMISSION_ID = 44;
+    FusedLocationProviderClient mFusedLocationClient;
+    ArrayList<QuocGia> quocGiaArrayList = new ArrayList<>();
+    AutoCompleteTextView autoCompleteQuocGia;
+    DanhSachQuocGia danhSachQuocGia = new DanhSachQuocGia(quocGiaArrayList);
+    ArrayAdapter<String> quocgiaAdapter;
+    Button btnLamTuoi;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,6 +118,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         KhaiBaoControlTab1();
 
         KhaiBaoControlTab2();
+
+        KhaiBaoControlTab3();
     }
 
 
@@ -94,7 +140,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         TabHost.TabSpec tab3 = tabHost.newTabSpec("t3");
         tab3.setContent(R.id.tab3);
-        tab3.setIndicator("BẢN ĐỒ");
+        tab3.setIndicator("THỜI TIẾT");
         tabHost.addTab(tab3);
     }
 
@@ -217,6 +263,42 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
+
+    /////////////KhaiBaoControlTab3
+
+    private void KhaiBaoControlTab3() {
+
+        addressTxt = findViewById(R.id.address);
+        updated_atTxt = findViewById(R.id.updated_at);
+        statusTxt = findViewById(R.id.status);
+        tempTxt = findViewById(R.id.temp);
+        temp_minTxt = findViewById(R.id.temp_min);
+        temp_maxTxt = findViewById(R.id.temp_max);
+        sunriseTxt = findViewById(R.id.sunrise);
+        sunsetTxt = findViewById(R.id.sunset);
+        windTxt = findViewById(R.id.wind);
+        pressureTxt = findViewById(R.id.pressure);
+        humidityTxt = findViewById(R.id.humidity);
+//khai bao cho get current location
+
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        try {
+            getLastLocation();
+            new weatherTask().execute(curLatLng);
+        }catch (Exception ex)
+        {
+            Toast.makeText(this,ex.toString(),Toast.LENGTH_LONG).show();
+        }
+//khoi tao autocompletequociga
+        autoCompleteQuocGia = findViewById(R.id.autoCompleteQuocGia);
+        danhSachQuocGia.taoDanhSach();
+        quocgiaAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1);
+        autoCompleteQuocGia.setAdapter(quocgiaAdapter);
+        String [] listQuocGia = getResources().getStringArray(R.array.arrayQuocGia);
+        quocgiaAdapter.addAll(listQuocGia);
+        btnLamTuoi = findViewById(R.id.btnLamTuoi);
+    }
+
     /////////////////// ADD EVENTS////////////////////
 
     private void addEvents() {
@@ -226,6 +308,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         eventClickTab1();
         eventClickTab2();
         eventLongClickTab1();
+        eventTab3();
 
 
     }
@@ -509,7 +592,47 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         startActivity(intent);
     }
 
+    private void eventTab3() {
+        autoCompleteQuocGia.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                String quocGiaName = quocgiaAdapter.getItem(i);
 
+                try {
+                    for (QuocGia g:quocGiaArrayList)
+                    {
+                        if (g.getTen().equals(quocGiaName))
+                        {
+                            LatLng latLngQg = g.getLatLng();
+                            new weatherTask().execute(latLngQg);
+                            break;
+                        }
+                    }
+
+                }catch (Exception ex)
+                {
+                   toad(ex.toString());
+                }
+
+
+            }
+        });
+
+
+        btnLamTuoi.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                try {
+                    getLastLocation();
+                    new weatherTask().execute(curLatLng);
+                }catch (Exception ex)
+                {
+
+                }
+
+            }
+        });
+    }
     ////////////// TASK DONG BO DANH BA --khoi tao Doc danh ba tu CSDL, neu chua co du lieu thi doc tu dien thoai
     class  TaskDocDanhBa extends AsyncTask<Void,Void,Void>
     {
@@ -666,6 +789,81 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         );
     }
 
+    ///TASK WEATHER
+class weatherTask extends AsyncTask<LatLng,Void,String>
+    {
+
+        @Override
+        protected String doInBackground(LatLng... latLngs) {
+            String response = HttpRequest.excuteGet("https://api.openweathermap.org/data/2.5/weather?lat=" + latLngs[0].latitude + "&lon=" + latLngs[0].longitude + "&units=metric&appid=" + API);
+            return response;
+        }
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            /* Showing the ProgressBar, Making the main design GONE */
+            findViewById(R.id.loader).setVisibility(View.VISIBLE);
+            findViewById(R.id.mainContainer).setVisibility(View.GONE);
+            findViewById(R.id.errorText).setVisibility(View.GONE);
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            try {
+                JSONObject jsonObj = new JSONObject(s);
+                JSONObject main = jsonObj.getJSONObject("main");
+                JSONObject sys = jsonObj.getJSONObject("sys");
+                JSONObject wind = jsonObj.getJSONObject("wind");
+                JSONObject weather = jsonObj.getJSONArray("weather").getJSONObject(0);
+
+                Long updatedAt = jsonObj.getLong("dt");
+                String updatedAtText = "Updated at: " + new SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale.ENGLISH).format(new Date(updatedAt * 1000));
+                String temp = main.getString("temp") + "°C";
+                String tempMin = "Min Temp: " + main.getString("temp_min") + "°C";
+                String tempMax = "Max Temp: " + main.getString("temp_max") + "°C";
+                String pressure = main.getString("pressure");
+                String humidity = main.getString("humidity");
+
+                Long sunrise = sys.getLong("sunrise");
+                Long sunset = sys.getLong("sunset");
+                String windSpeed = wind.getString("speed");
+                String weatherDescription = weather.getString("description");
+
+                String address = jsonObj.getString("name") + ", " + sys.getString("country");
+
+
+                /* Populating extracted data into our views */
+                addressTxt.setText(address);
+                updated_atTxt.setText(updatedAtText);
+                statusTxt.setText(weatherDescription.toUpperCase());
+                tempTxt.setText(temp);
+                temp_minTxt.setText(tempMin);
+                temp_maxTxt.setText(tempMax);
+                sunriseTxt.setText(new SimpleDateFormat("hh:mm a", Locale.ENGLISH).format(new Date(sunrise * 1000)));
+                sunsetTxt.setText(new SimpleDateFormat("hh:mm a", Locale.ENGLISH).format(new Date(sunset * 1000)));
+                windTxt.setText(windSpeed);
+                pressureTxt.setText(pressure);
+                humidityTxt.setText(humidity);
+
+                /* Views populated, Hiding the loader, Showing the main design */
+                findViewById(R.id.loader).setVisibility(View.GONE);
+                findViewById(R.id.mainContainer).setVisibility(View.VISIBLE);
+
+
+            } catch (JSONException e) {
+                findViewById(R.id.loader).setVisibility(View.GONE);
+                findViewById(R.id.errorText).setVisibility(View.VISIBLE);
+            }
+        }
+
+        @Override
+        protected void onProgressUpdate(Void... values) {
+            super.onProgressUpdate(values);
+        }
+    }
+
 
 
     ///////////// ONPAUSE va ONRESUM
@@ -683,5 +881,103 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         khoiTaoCSDL();
         ganTenControlTab1();
 
+    }
+
+
+    /////////GETCURRENTLOCATION
+    @SuppressLint("MissingPermission")
+    private void getLastLocation(){
+        if (checkPermissions()) {
+            if (isLocationEnabled()) {
+                mFusedLocationClient.getLastLocation().addOnCompleteListener(
+                        new OnCompleteListener<Location>() {
+                            @Override
+                            public void onComplete(@NonNull Task<Location> task) {
+                                Location location = task.getResult();
+                                if (location == null) {
+                                    requestNewLocationData();
+                                } else {
+                                    new weatherTask().execute(new LatLng(location.getLatitude(),location.getLongitude()));
+
+                                }
+                            }
+                        }
+                );
+            } else {
+                //y/c bat GPS
+                Toast.makeText(this, "Turn on location", Toast.LENGTH_LONG).show();
+                //chuyen den GPS
+                /*Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                startActivity(intent);*/
+            }
+        } else {
+            requestPermissions();
+        }
+    }
+
+
+    @SuppressLint("MissingPermission")
+    private void requestNewLocationData(){
+
+        LocationRequest mLocationRequest = new LocationRequest();
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        mLocationRequest.setInterval(0);
+        mLocationRequest.setFastestInterval(0);
+        mLocationRequest.setNumUpdates(1);
+
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        mFusedLocationClient.requestLocationUpdates(
+                mLocationRequest, mLocationCallback,
+                Looper.myLooper()
+        );
+
+    }
+
+    private LocationCallback mLocationCallback = new LocationCallback() {
+        @Override
+        public void onLocationResult(LocationResult locationResult) {
+            Location mLastLocation = locationResult.getLastLocation();
+            new weatherTask().execute(new LatLng(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
+
+        }
+    };
+
+    private boolean checkPermissions() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            return true;
+        }
+        return false;
+    }
+
+    private void requestPermissions() {
+        ActivityCompat.requestPermissions(
+                this,
+                new String[]{Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION},
+                PERMISSION_ID
+        );
+    }
+
+    private boolean isLocationEnabled() {
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(
+                LocationManager.NETWORK_PROVIDER
+        );
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_ID) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                getLastLocation();
+            }
+        }
+    }
+
+
+    public void toad(String s)
+    {
+        Toast.makeText(this,s,Toast.LENGTH_LONG).show();
     }
 }
