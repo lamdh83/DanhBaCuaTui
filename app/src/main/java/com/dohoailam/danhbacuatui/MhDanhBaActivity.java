@@ -256,18 +256,22 @@ public class MhDanhBaActivity extends AppCompatActivity {
 
     @Override
     public boolean onContextItemSelected(MenuItem item) {
-        switch (item.getItemId())
-        {
-            case R.id.mnuCall:
-                lam.callPhone(selectedDanhBa.getSo_dt());
-                break;
-            case R.id.mnuSms:
-                moManHinhNhanTin(selectedDanhBa.getSo_dt().toString());
-                break;
-            case R.id.mnuSua:
-                moManHinhSuaDanhBa(selectedDanhBa);
-                break;
+        if (selectedDanhBa != null) {
+            switch (item.getItemId()) {
+                case R.id.mnuCall:
+                    lam.callPhone(selectedDanhBa.getSo_dt());
+                    break;
+                case R.id.mnuSms:
+                    moManHinhNhanTin(selectedDanhBa.getSo_dt().toString());
+                    break;
+                case R.id.mnuSua:
+                    moManHinhSuaDanhBa(selectedDanhBa);
+                    break;
 
+            }
+        }else
+        {
+            Toast.makeText(this,"Bạn chưa chọn danh bạ.",Toast.LENGTH_SHORT).show();
         }
         return super.onContextItemSelected(item);
     }

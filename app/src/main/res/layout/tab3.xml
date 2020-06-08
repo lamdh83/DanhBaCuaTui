@@ -27,7 +27,7 @@
 
             <Button
                 android:id="@+id/btnLamTuoi"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_gradient"
                 android:text="tại đây" />
